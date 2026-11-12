@@ -138,7 +138,7 @@ input[type=color]{width:60px;height:33px;border:0;background:transparent;cursor:
 <div class="controls"><button class="btn small" id="nudgeBack">− 0,1 s</button><button class="btn small" id="nudgeForward">+ 0,1 s</button><button class="btn small" id="seekLine">▶ Ouvir verso</button></div></div>
 </div>
 <div id="wordsSection" class="section">
-<div class="instructions">Escolha um verso já sincronizado. Aqui aparecem <b>somente as palavras desse verso</b>. Marque cada palavra com Espaço ou selecione uma palavra para corrigir seu tempo.</div>
+<div class="instructions">Escolha qualquer verso, mesmo sem tempos. Clique em Começar e marque as palavras com Espaço. O início do verso será preenchido pelo primeiro toque.</div>
 <label><span class="label">VERSO</span><select id="wordLine"></select></label>
 <div id="wordList" class="wordlist" style="margin-top:12px"></div>
 <div class="controls"><button class="btn soft" id="tapWords">⌨ Marcar palavras com Espaço</button><button class="btn" id="undoWord">↶ Desfazer toque</button></div>
@@ -217,7 +217,7 @@ function updateStatus(){const linesDone=project.lines.filter(l=>hasN(l.start)).l
 function beginLines(){if(tapMode==='lines'){stopTap();return}if(!project.lines.length)return alert('Importe a letra primeiro.');const already=project.lines.some(l=>hasN(l.start));if(already&&!confirm('Reiniciar as marcações dos versos?'))return;if(already){project.lines.forEach(l=>{l.start=null;l.end=null});project.tokens=[]}tapMode='lines';tapIndex=0;document.activeElement?.blur();save();renderLines();updateStatus();renderGuide()}
 $('tapLines').onclick=beginLines;
 function markTap(){if(tapMode==='lines'){const current=project.lines[tapIndex];if(!current){stopTap();return}const t=Number(time.toFixed(2));if(tapIndex>0){const previous=project.lines[tapIndex-1];if(t<previous.start)return;if(!hasN(previous.end))previous.end=Math.min(t,previous.start+Math.max(.2,t-previous.start))}current.start=t;current.end=null;chosenLine=tapIndex;tapIndex++;if(tapIndex>=project.lines.length)stopTap();persist();return}
-if(tapMode==='words'){const words=wordsFor(chosenLine),w=words[tapIndex];if(!w){stopTap();return}const t=Number(time.toFixed(2));if(tapIndex>0){const prev=words[tapIndex-1];if(t<prev.start)return;prev.end=t}w.start=t;w.end=null;chosenWord=tapIndex;tapIndex++;if(tapIndex>=words.length){const l=project.lines[chosenLine];w.end=hasN(l.end)?Math.max(w.start+.1,l.end):null;stopTap()}persist()}}
+if(tapMode==='words'){const words=wordsFor(chosenLine),w=words[tapIndex];if(!w){stopTap();return}const t=Number(time.toFixed(2));if(tapIndex>0){const prev=words[tapIndex-1];if(t<prev.start)return;prev.end=t}w.start=t;w.end=null;const l=project.lines[chosenLine];if(tapIndex===0)l.start=t;chosenWord=tapIndex;tapIndex++;if(tapIndex>=words.length){w.end=hasN(l.end)&&l.end>w.start?l.end:Number((w.start+.6).toFixed(2));l.end=w.end;stopTap()}else if(tapIndex>1)l.end=words[tapIndex-1].end;persist()}}
 document.addEventListener('keydown',e=>{if(e.code!=='Space'||e.repeat||!tapMode||e.altKey||e.ctrlKey||e.metaKey)return;const active=document.activeElement;if(active&&(active.matches('input,textarea,select')||active.isContentEditable))return;e.preventDefault();markTap()});
 $('undoLine').onclick=()=>{if(tapMode!=='lines'){tapMode='lines';tapIndex=project.lines.findIndex(l=>!hasN(l.start));if(tapIndex<0)tapIndex=project.lines.length}if(tapIndex===0)return;tapIndex--;project.lines[tapIndex].start=null;project.lines[tapIndex].end=null;if(tapIndex>0)project.lines[tapIndex-1].end=null;chosenLine=tapIndex;persist()};
 function wordsFor(line){return project.tokens.filter(t=>t.line===line)}
@@ -225,9 +225,9 @@ function ensureWords(line){const existing=wordsFor(line);if(existing.length)retu
 function renderWords(){const sel=$('wordLine');sel.innerHTML=project.lines.map((l,i)=>'<option value="'+i+'">'+(i+1)+'. '+escapeText(l.text)+'</option>').join('');chosenLine=Math.min(chosenLine,Math.max(0,project.lines.length-1));sel.value=String(chosenLine);const words=ensureWords(chosenLine);$('wordList').innerHTML=words.map((w,i)=>'<button type="button" data-word="'+i+'" class="word'+(i===chosenWord?' active':'')+(hasN(w.start)?' marked':'')+'">'+escapeText(w.display)+'</button>').join('');$('wordList').querySelectorAll('[data-word]').forEach(b=>b.onclick=()=>{chosenWord=Number(b.dataset.word);renderWordDetail()});renderWordDetail();updateStatus()}
 function renderWordDetail(){const words=wordsFor(chosenLine),w=words[chosenWord];$('selectedWord').textContent=w?w.display:'Nenhuma palavra';setInput('wordStart',w?.start);setInput('wordEnd',w?.end);$('wordList').querySelectorAll('[data-word]').forEach(b=>b.classList.toggle('active',Number(b.dataset.word)===chosenWord))}
 $('wordLine').onchange=e=>{chosenLine=Number(e.target.value);chosenWord=0;stopTap();renderLines();renderWords();preview();renderGuide()};
-function startWords(){if(tapMode==='words'){stopTap();return}const l=project.lines[chosenLine];if(!l)return alert('Importe a letra.');if(!hasN(l.start))return alert('Primeiro marque o início do verso na aba Versos.');const words=ensureWords(chosenLine);if(words.some(w=>hasN(w.start))&&!confirm('Refazer a marcação das palavras deste verso?'))return;words.forEach(w=>{w.start=null;w.end=null});tapMode='words';tapIndex=0;chosenWord=0;toTime(Math.max(0,l.start-1));document.activeElement?.blur();save();renderWords();renderGuide()}
+function startWords(){if(tapMode==='words'){stopTap();return}const l=project.lines[chosenLine];if(!l)return alert('Importe a letra.');const words=ensureWords(chosenLine);if(words.some(w=>hasN(w.start))&&!confirm('Refazer a marcação das palavras deste verso?'))return;words.forEach(w=>{w.start=null;w.end=null});tapMode='words';tapIndex=0;chosenWord=0;if(hasN(l.start))toTime(Math.max(0,l.start-1));document.activeElement?.blur();save();renderWords();renderGuide()}
 $('tapWords').onclick=startWords;
-$('undoWord').onclick=()=>{let words=wordsFor(chosenLine);if(tapMode!=='words'){tapMode='words';tapIndex=words.findIndex(w=>!hasN(w.start));if(tapIndex<0)tapIndex=words.length}if(tapIndex===0)return;tapIndex--;words[tapIndex].start=null;words[tapIndex].end=null;if(tapIndex>0)words[tapIndex-1].end=null;chosenWord=tapIndex;persist()};
+$('undoWord').onclick=()=>{let words=wordsFor(chosenLine);if(tapMode!=='words'){tapMode='words';tapIndex=words.findIndex(w=>!hasN(w.start));if(tapIndex<0)tapIndex=words.length}if(tapIndex===0)return;tapIndex--;words[tapIndex].start=null;words[tapIndex].end=null;if(tapIndex>0)words[tapIndex-1].end=null;const l=project.lines[chosenLine];l.start=hasN(words[0]?.start)?words[0].start:null;l.end=null;chosenWord=tapIndex;persist()};
 function setWordTime(side,value){const words=wordsFor(chosenLine),w=words[chosenWord];if(!w)return;const n=value===''?null:Number(value);if(n!==null&&(!hasN(n)||n<0))return;const next={...w,[side]:n};if(hasN(next.start)&&hasN(next.end)&&next.end<=next.start)return alert('Fim deve ser maior que início.');w[side]=n;persist()}
 $('wordStart').onchange=e=>setWordTime('start',e.target.value);$('wordEnd').onchange=e=>setWordTime('end',e.target.value);
 
@@ -253,7 +253,7 @@ function renderGuide(){
  $('guideNext').textContent=upcoming?'Depois: '+(byWord?upcoming.display:upcoming.text):'';
  $('guideActive').classList.toggle('hide',!active);
  $('guideStart').classList.toggle('hide',active);
- $('guideHelp').textContent=byWord?'Escolha um verso já marcado. Ao começar, o áudio volta um pouco antes dele e o Espaço marca cada palavra.':'Clique em Começar. A música toca e o Espaço marca o começo de cada verso.';
+ $('guideHelp').textContent=byWord?'Escolha um verso. Clique em Começar e marque cada palavra na posição atual do áudio. Não precisa marcar Versos antes.':'Clique em Começar. A música toca e o Espaço marca o começo de cada verso.';
  $('guideResult').textContent=active?'TECLADO ATIVO: Espaço marca o trecho destacado. Para escrever nos campos, conclua a marcação primeiro.':(done?done+' de '+items.length+' marcações registradas. Você pode revisar nos ajustes finos abaixo.':'Nenhum horário é inventado. Use o botão Começar para ativar o teclado.');
  $('guidePause').textContent=media.paused?'▶ Continuar':'Ⅱ Pausar';
 }
@@ -261,7 +261,7 @@ async function guideBegin(){
  if(!hasFile)return alert('Primeiro carregue um MP3 ou MP4 na etapa 1.');
  if(!project.lines.length)return alert('Primeiro cole e importe a letra da música.');
  if(mode==='lines'){toTime(0);beginLines()}
- else{const l=project.lines[chosenLine];if(!hasN(l?.start))return alert('Marque primeiro o início desse verso na aba Versos.');startWords()}
+ else{startWords()}
  if(!tapMode)return;
  document.activeElement?.blur();
  try{await media.play()}catch{alert('Não foi possível tocar o arquivo. Confira o formato e tente novamente.')}
@@ -273,7 +273,7 @@ $('guidePause').onclick=()=>{if(media.paused)media.play().catch(()=>{});else med
 $('guideBack').onclick=()=>{toTime(Math.max(0,time-3));document.activeElement?.blur();renderGuide()};
 $('guideUndo').onclick=()=>{if(tapMode==='lines')$('undoLine').click();else $('undoWord').click();document.activeElement?.blur();renderGuide()};
 $('guideFinish').onclick=()=>{if(tapMode==='lines'&&tapIndex>0){const last=project.lines[tapIndex-1];if(last&&!hasN(last.end)&&time>last.start)last.end=Number(time.toFixed(2))}
- if(tapMode==='words'&&tapIndex>0){const last=wordsFor(chosenLine)[tapIndex-1];if(last&&!hasN(last.end)&&time>last.start)last.end=Number(time.toFixed(2))}
+ if(tapMode==='words'&&tapIndex>0){const last=wordsFor(chosenLine)[tapIndex-1];if(last&&!hasN(last.end))last.end=Number(Math.max(time,last.start+.25).toFixed(2));const line=project.lines[chosenLine];if(last)line.end=last.end}
  stopTap();media.pause();persist();document.activeElement?.blur();
 };
 
