@@ -190,22 +190,22 @@ function escapeText(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 function fmt(s){return String(Math.floor(Math.max(0,s)/60)).padStart(2,'0')+':'+String(Math.floor(Math.max(0,s)%60)).padStart(2,'0')}
 const hasN=n=>typeof n==='number'&&Number.isFinite(n),getDuration=()=>hasN(media.duration)?media.duration:Math.max(180,...project.lines.map(l=>hasN(l.end)?l.end:0));
 function switchTab(a,b){$(a).classList.add('active');$(b).classList.remove('active')}
-function stopTap(){tapMode=null;updateStatus()}
+function stopTap(){tapMode=null;updateStatus();renderGuide()}
 function toTime(t){time=Math.max(0,Math.min(getDuration(),t));if(hasFile)media.currentTime=time;preview()}
 function setInput(id,n){$(id).value=hasN(n)?n:''}
-function persist(){save();renderLines();renderWords();preview();updateStatus()}
-function setMode(which){mode=which;switchTab(which==='lines'?'linesTab':'wordsTab',which==='lines'?'wordsTab':'linesTab');$('linesSection').classList.toggle('active',which==='lines');$('wordsSection').classList.toggle('active',which==='words');stopTap();renderWords();preview()}
+function persist(){save();renderLines();renderWords();preview();updateStatus();renderGuide()}
+function setMode(which){mode=which;switchTab(which==='lines'?'linesTab':'wordsTab',which==='lines'?'wordsTab':'linesTab');$('linesSection').classList.toggle('active',which==='lines');$('wordsSection').classList.toggle('active',which==='words');stopTap();renderWords();preview();renderGuide()}
 $('linesTab').onclick=()=>setMode('lines');$('wordsTab').onclick=()=>setMode('words');
 function switchAppearance(which){switchTab(which==='appearance'?'appearanceTab':'segmentsTab',which==='appearance'?'segmentsTab':'appearanceTab');$('appearanceSection').classList.toggle('active',which==='appearance');$('segmentsSection').classList.toggle('active',which==='segments')}
 $('appearanceTab').onclick=()=>switchAppearance('appearance');$('segmentsTab').onclick=()=>switchAppearance('segments');
 $('navLibrary').onclick=()=>{$('editor').classList.add('hide');$('library').classList.remove('hide');$('pageTitle').textContent='Biblioteca';switchTab('navLibrary','navEditor')};
 function openEditor(){$('editor').classList.remove('hide');$('library').classList.add('hide');$('pageTitle').textContent='Criar karaokê';switchTab('navEditor','navLibrary')}
 $('navEditor').onclick=openEditor;$('libraryOpen').onclick=openEditor;
-function loadFields(){$('lyricSize').value=project.style.fontSize;$('title').value=project.title||'';$('artist').value=project.artist||'';$('lyrics').value=project.lines.map(l=>l.text).join('\n');for(const k of ['background','textColor','accent','lyricFont','lyricAnimation','outlineWidth','introAnimation','introDuration','titleSize','artistSize','titleColor','artistColor']){const map={textColor:'text'};$(k).value=project.style[map[k]||k]??baseStyle[map[k]||k]}renderLines();renderWords();renderSegments();preview()}
+function loadFields(){$('lyricSize').value=project.style.fontSize;$('title').value=project.title||'';$('artist').value=project.artist||'';$('lyrics').value=project.lines.map(l=>l.text).join('\n');for(const k of ['background','textColor','accent','lyricFont','lyricAnimation','outlineWidth','introAnimation','introDuration','titleSize','artistSize','titleColor','artistColor']){const map={textColor:'text'};$(k).value=project.style[map[k]||k]??baseStyle[map[k]||k]}renderLines();renderWords();renderSegments();preview();renderGuide()}
 for(const k of ['title','artist'])$(k).oninput=e=>{project[k]=e.target.value;save();preview()};
 function importLyrics(){const lines=$('lyrics').value.split(/\r?\n/).map(t=>t.trim()).filter(Boolean);if(!lines.length)return alert('Cole a letra primeiro.');if((project.lines.some(l=>hasN(l.start))||project.tokens.some(t=>hasN(t.start)))&&!confirm('Substituir a letra descarta os tempos já marcados. Deseja continuar?'))return;project.lines=lines.map(text=>({text,start:null,end:null}));project.tokens=[];chosenLine=0;chosenWord=0;stopTap();persist();$('importInfo').textContent=lines.length+' versos importados — nenhum tempo criado'}
 $('import').onclick=importLyrics;
-function renderLines(){const box=$('lineList');box.innerHTML=project.lines.map((l,i)=>'<button type="button" class="lineitem'+(i===chosenLine?' selected':'')+'" data-line="'+i+'"><span class="counter">'+(i+1)+'.</span><span class="phrase">'+escapeText(l.text)+'</span><span class="time '+(!hasN(l.start)?'pending':'')+'">'+(hasN(l.start)?fmt(l.start)+(hasN(l.end)?'–'+fmt(l.end):' · sem fim'):'Não marcado')+'</span></button>').join('')||'<div class="instructions">Importe a letra acima para ver os versos aqui.</div>';box.querySelectorAll('[data-line]').forEach(b=>b.onclick=()=>{chosenLine=Number(b.dataset.line);renderLines();renderWords();preview()});const l=project.lines[chosenLine];$('selectedLine').textContent=l?l.text:'Selecione um verso';setInput('lineStart',l?.start);setInput('lineEnd',l?.end)}
+function renderLines(){const box=$('lineList');box.innerHTML=project.lines.map((l,i)=>'<button type="button" class="lineitem'+(i===chosenLine?' selected':'')+'" data-line="'+i+'"><span class="counter">'+(i+1)+'.</span><span class="phrase">'+escapeText(l.text)+'</span><span class="time '+(!hasN(l.start)?'pending':'')+'">'+(hasN(l.start)?fmt(l.start)+(hasN(l.end)?'–'+fmt(l.end):' · sem fim'):'Não marcado')+'</span></button>').join('')||'<div class="instructions">Importe a letra acima para ver os versos aqui.</div>';box.querySelectorAll('[data-line]').forEach(b=>b.onclick=()=>{chosenLine=Number(b.dataset.line);renderLines();renderWords();preview();renderGuide()});const l=project.lines[chosenLine];$('selectedLine').textContent=l?l.text:'Selecione um verso';setInput('lineStart',l?.start);setInput('lineEnd',l?.end)}
 function setLineTime(side,v){const l=project.lines[chosenLine];if(!l)return;const n=v===''?null:Number(v);if(n!==null&&(!hasN(n)||n<0))return;const next={...l,[side]:n};if(hasN(next.start)&&hasN(next.end)&&next.end<=next.start)return alert('O fim deve ser depois do início.');l[side]=n;if(project.tokens.some(t=>t.line===chosenLine))project.tokens=project.tokens.filter(t=>t.line!==chosenLine);persist()}
 $('lineStart').onchange=e=>setLineTime('start',e.target.value);$('lineEnd').onchange=e=>setLineTime('end',e.target.value);
 function markLine(side){const l=project.lines[chosenLine];if(!l)return alert('Importe a letra primeiro.');l[side]=Number(time.toFixed(2));if(side==='end'&&hasN(l.start)&&l.end<=l.start){l.end=null;return alert('Posicione a música depois do início do verso.')}persist()}
@@ -214,26 +214,73 @@ $('nudgeBack').onclick=()=>nudge(-.1);$('nudgeForward').onclick=()=>nudge(.1);
 function nudge(by){const l=project.lines[chosenLine];if(!l||!hasN(l.start))return;const old=l.start;l.start=Math.max(0,Number((old+by).toFixed(2)));if(hasN(l.end))l.end=Math.max(l.start+.05,Number((l.end+by).toFixed(2)));persist()}
 $('seekLine').onclick=()=>{const l=project.lines[chosenLine];if(l&&hasN(l.start))toTime(Math.max(0,l.start-.5));if(hasFile)media.play().catch(()=>{})};
 function updateStatus(){const linesDone=project.lines.filter(l=>hasN(l.start)).length,total=project.lines.length;$('lineStatus').textContent=tapMode==='lines'?'Pressione ESPAÇO no início do verso '+(tapIndex+1)+' de '+total:linesDone+' de '+total+' versos com início marcado';$('tapLines').textContent=tapMode==='lines'?'■ Encerrar marcação':'⌨ Marcar versos com Espaço';const words=wordsFor(chosenLine),done=words.filter(w=>hasN(w.start)).length;$('wordStatus').textContent=tapMode==='words'?'Pressione ESPAÇO na palavra '+Math.min(tapIndex+1,words.length)+' de '+words.length:done+' de '+words.length+' palavras marcadas';$('tapWords').textContent=tapMode==='words'?'■ Encerrar marcação':'⌨ Marcar palavras com Espaço'}
-function beginLines(){if(tapMode==='lines'){stopTap();return}if(!project.lines.length)return alert('Importe a letra primeiro.');const already=project.lines.some(l=>hasN(l.start));if(already&&!confirm('Reiniciar as marcações dos versos?'))return;if(already){project.lines.forEach(l=>{l.start=null;l.end=null});project.tokens=[]}tapMode='lines';tapIndex=0;document.activeElement.blur();save();renderLines();updateStatus()}
+function beginLines(){if(tapMode==='lines'){stopTap();return}if(!project.lines.length)return alert('Importe a letra primeiro.');const already=project.lines.some(l=>hasN(l.start));if(already&&!confirm('Reiniciar as marcações dos versos?'))return;if(already){project.lines.forEach(l=>{l.start=null;l.end=null});project.tokens=[]}tapMode='lines';tapIndex=0;document.activeElement?.blur();save();renderLines();updateStatus();renderGuide()}
 $('tapLines').onclick=beginLines;
 function markTap(){if(tapMode==='lines'){const current=project.lines[tapIndex];if(!current){stopTap();return}const t=Number(time.toFixed(2));if(tapIndex>0){const previous=project.lines[tapIndex-1];if(t<previous.start)return;if(!hasN(previous.end))previous.end=Math.min(t,previous.start+Math.max(.2,t-previous.start))}current.start=t;current.end=null;chosenLine=tapIndex;tapIndex++;if(tapIndex>=project.lines.length)stopTap();persist();return}
-if(tapMode==='words'){const words=wordsFor(chosenLine),w=words[tapIndex];if(!w){stopTap();return}const t=Number(time.toFixed(2));if(tapIndex>0){const prev=words[tapIndex-1];if(t<prev.start)return;prev.end=t}w.start=t;w.end=null;chosenWord=tapIndex;tapIndex++;if(tapIndex>=words.length){const l=project.lines[chosenLine];w.end=hasN(l.end)?Math.max(w.start+.1,l.end):w.start+.6;stopTap()}persist()}}
-document.addEventListener('keydown',e=>{if(e.code!=='Space'||e.repeat||!tapMode||e.altKey||e.ctrlKey||e.metaKey)return;const active=document.activeElement;if(active&&(active.matches('input,textarea,select,button')||active.isContentEditable))return;e.preventDefault();markTap()});
+if(tapMode==='words'){const words=wordsFor(chosenLine),w=words[tapIndex];if(!w){stopTap();return}const t=Number(time.toFixed(2));if(tapIndex>0){const prev=words[tapIndex-1];if(t<prev.start)return;prev.end=t}w.start=t;w.end=null;chosenWord=tapIndex;tapIndex++;if(tapIndex>=words.length){const l=project.lines[chosenLine];w.end=hasN(l.end)?Math.max(w.start+.1,l.end):null;stopTap()}persist()}}
+document.addEventListener('keydown',e=>{if(e.code!=='Space'||e.repeat||!tapMode||e.altKey||e.ctrlKey||e.metaKey)return;const active=document.activeElement;if(active&&(active.matches('input,textarea,select')||active.isContentEditable))return;e.preventDefault();markTap()});
 $('undoLine').onclick=()=>{if(tapMode!=='lines'){tapMode='lines';tapIndex=project.lines.findIndex(l=>!hasN(l.start));if(tapIndex<0)tapIndex=project.lines.length}if(tapIndex===0)return;tapIndex--;project.lines[tapIndex].start=null;project.lines[tapIndex].end=null;if(tapIndex>0)project.lines[tapIndex-1].end=null;chosenLine=tapIndex;persist()};
 function wordsFor(line){return project.tokens.filter(t=>t.line===line)}
 function ensureWords(line){const existing=wordsFor(line);if(existing.length)return existing;const l=project.lines[line];if(!l)return [];const parts=l.text.trim().split(/\s+/).filter(Boolean);const newTokens=parts.map(display=>({line,display,start:null,end:null}));project.tokens.push(...newTokens);return newTokens}
 function renderWords(){const sel=$('wordLine');sel.innerHTML=project.lines.map((l,i)=>'<option value="'+i+'">'+(i+1)+'. '+escapeText(l.text)+'</option>').join('');chosenLine=Math.min(chosenLine,Math.max(0,project.lines.length-1));sel.value=String(chosenLine);const words=ensureWords(chosenLine);$('wordList').innerHTML=words.map((w,i)=>'<button type="button" data-word="'+i+'" class="word'+(i===chosenWord?' active':'')+(hasN(w.start)?' marked':'')+'">'+escapeText(w.display)+'</button>').join('');$('wordList').querySelectorAll('[data-word]').forEach(b=>b.onclick=()=>{chosenWord=Number(b.dataset.word);renderWordDetail()});renderWordDetail();updateStatus()}
 function renderWordDetail(){const words=wordsFor(chosenLine),w=words[chosenWord];$('selectedWord').textContent=w?w.display:'Nenhuma palavra';setInput('wordStart',w?.start);setInput('wordEnd',w?.end);$('wordList').querySelectorAll('[data-word]').forEach(b=>b.classList.toggle('active',Number(b.dataset.word)===chosenWord))}
-$('wordLine').onchange=e=>{chosenLine=Number(e.target.value);chosenWord=0;stopTap();renderLines();renderWords();preview()};
-function startWords(){if(tapMode==='words'){stopTap();return}const l=project.lines[chosenLine];if(!l)return alert('Importe a letra.');if(!hasN(l.start))return alert('Primeiro marque o início do verso na aba Versos.');const words=ensureWords(chosenLine);if(words.some(w=>hasN(w.start))&&!confirm('Refazer a marcação das palavras deste verso?'))return;words.forEach(w=>{w.start=null;w.end=null});tapMode='words';tapIndex=0;chosenWord=0;toTime(Math.max(0,l.start-.5));document.activeElement.blur();save();renderWords()}
+$('wordLine').onchange=e=>{chosenLine=Number(e.target.value);chosenWord=0;stopTap();renderLines();renderWords();preview();renderGuide()};
+function startWords(){if(tapMode==='words'){stopTap();return}const l=project.lines[chosenLine];if(!l)return alert('Importe a letra.');if(!hasN(l.start))return alert('Primeiro marque o início do verso na aba Versos.');const words=ensureWords(chosenLine);if(words.some(w=>hasN(w.start))&&!confirm('Refazer a marcação das palavras deste verso?'))return;words.forEach(w=>{w.start=null;w.end=null});tapMode='words';tapIndex=0;chosenWord=0;toTime(Math.max(0,l.start-1));document.activeElement?.blur();save();renderWords();renderGuide()}
 $('tapWords').onclick=startWords;
 $('undoWord').onclick=()=>{let words=wordsFor(chosenLine);if(tapMode!=='words'){tapMode='words';tapIndex=words.findIndex(w=>!hasN(w.start));if(tapIndex<0)tapIndex=words.length}if(tapIndex===0)return;tapIndex--;words[tapIndex].start=null;words[tapIndex].end=null;if(tapIndex>0)words[tapIndex-1].end=null;chosenWord=tapIndex;persist()};
 function setWordTime(side,value){const words=wordsFor(chosenLine),w=words[chosenWord];if(!w)return;const n=value===''?null:Number(value);if(n!==null&&(!hasN(n)||n<0))return;const next={...w,[side]:n};if(hasN(next.start)&&hasN(next.end)&&next.end<=next.start)return alert('Fim deve ser maior que início.');w[side]=n;persist()}
 $('wordStart').onchange=e=>setWordTime('start',e.target.value);$('wordEnd').onchange=e=>setWordTime('end',e.target.value);
+
+function guideWords(){return wordsFor(chosenLine)}
+function setGuideMode(which){if(tapMode)stopTap();setMode(which);renderGuide()}
+$('guideLines').onclick=()=>setGuideMode('lines');
+$('guideWords').onclick=()=>setGuideMode('words');
+$('guideVerse').onchange=e=>{chosenLine=Number(e.target.value);chosenWord=0;stopTap();renderLines();renderWords();renderGuide();preview()};
+function renderGuide(){
+ const active=!!tapMode,all=project.lines,byWord=mode==='words',words=guideWords();
+ const options=all.map((l,i)=>'<option value="'+i+'">'+(i+1)+'. '+escapeText(l.text)+'</option>').join('');
+ const picker=$('guideVerse');if(!active&&picker.innerHTML!==options)picker.innerHTML=options;
+ picker.value=String(chosenLine);$('guidePicker').classList.toggle('hide',!byWord);
+ $('guideLines').classList.toggle('selected',!byWord);$('guideWords').classList.toggle('selected',byWord);
+ const items=byWord?words:all;
+ const idx=active?tapIndex:byWord?Math.max(0,words.findIndex(w=>!hasN(w.start))):Math.max(0,all.findIndex(l=>!hasN(l.start)));
+ const next=items[idx]||null;const done=items.filter(l=>hasN(l.start)).length;
+ $('guideCount').textContent=done+' de '+items.length+' marcados';
+ $('guideProgress').style.width=(items.length?done/items.length*100:0)+'%';
+ $('guideCaption').textContent=active?'PRESSIONE ESPAÇO QUANDO COMEÇAR':(done===items.length&&items.length?'TODOS MARCADOS':'PRÓXIMO TRECHO');
+ $('guideText').textContent=next?(byWord?next.display:next.text):(items.length?'Marcação concluída!':'Importe a letra na etapa 1.');
+ const upcoming=items[idx+1];
+ $('guideNext').textContent=upcoming?'Depois: '+(byWord?upcoming.display:upcoming.text):'';
+ $('guideActive').classList.toggle('hide',!active);
+ $('guideStart').classList.toggle('hide',active);
+ $('guideHelp').textContent=byWord?'Escolha um verso já marcado. Ao começar, o áudio volta um pouco antes dele e o Espaço marca cada palavra.':'Clique em Começar. A música toca e o Espaço marca o começo de cada verso.';
+ $('guideResult').textContent=active?'TECLADO ATIVO: Espaço marca o trecho destacado. Para escrever nos campos, conclua a marcação primeiro.':(done?done+' de '+items.length+' marcações registradas. Você pode revisar nos ajustes finos abaixo.':'Nenhum horário é inventado. Use o botão Começar para ativar o teclado.');
+ $('guidePause').textContent=media.paused?'▶ Continuar':'Ⅱ Pausar';
+}
+async function guideBegin(){
+ if(!hasFile)return alert('Primeiro carregue um MP3 ou MP4 na etapa 1.');
+ if(!project.lines.length)return alert('Primeiro cole e importe a letra da música.');
+ if(mode==='lines'){toTime(0);beginLines()}
+ else{const l=project.lines[chosenLine];if(!hasN(l?.start))return alert('Marque primeiro o início desse verso na aba Versos.');startWords()}
+ if(!tapMode)return;
+ document.activeElement?.blur();
+ try{await media.play()}catch{alert('Não foi possível tocar o arquivo. Confira o formato e tente novamente.')}
+ renderGuide();
+}
+$('guideStart').onclick=guideBegin;
+$('guideTap').onclick=()=>{markTap();document.activeElement?.blur();renderGuide()};
+$('guidePause').onclick=()=>{if(media.paused)media.play().catch(()=>{});else media.pause();document.activeElement?.blur();renderGuide()};
+$('guideBack').onclick=()=>{toTime(Math.max(0,time-3));document.activeElement?.blur();renderGuide()};
+$('guideUndo').onclick=()=>{if(tapMode==='lines')$('undoLine').click();else $('undoWord').click();document.activeElement?.blur();renderGuide()};
+$('guideFinish').onclick=()=>{if(tapMode==='lines'&&tapIndex>0){const last=project.lines[tapIndex-1];if(last&&!hasN(last.end)&&time>last.start)last.end=Number(time.toFixed(2))}
+ if(tapMode==='words'&&tapIndex>0){const last=wordsFor(chosenLine)[tapIndex-1];if(last&&!hasN(last.end)&&time>last.start)last.end=Number(time.toFixed(2))}
+ stopTap();media.pause();persist();document.activeElement?.blur();
+};
+
 function segmentAt(t){return project.segments.find(s=>t>=s.start&&t<s.end)}
 function preview(){const st=project.style,duration=getDuration();$('preview').style.background=st.background;$('showTitle').textContent=project.title||'Nome da música';$('showArtist').textContent=project.artist||'Artista';$('showTitle').style.cssText='font-size:clamp(16px,3vw,'+st.titleSize+'px);color:'+st.titleColor;$('showArtist').style.cssText='font-size:clamp(12px,2vw,'+st.artistSize+'px);color:'+st.artistColor;const opening=time<Number(st.introDuration);$('opening').className=opening?'introanim-'+st.introAnimation:'hide';const line=project.lines.find(l=>hasN(l.start)&&time>=l.start&&(!hasN(l.end)||time<l.end));const seg=segmentAt(time),lineEl=$('showLyric');lineEl.classList.toggle('hide',opening);$('showHint').textContent='';if(line){const i=project.lines.indexOf(line),words=wordsFor(i);if(words.some(w=>hasN(w.start))){lineEl.innerHTML=words.map(w=>'<span style="color:'+(hasN(w.start)&&time>=w.start&&(!hasN(w.end)||time<w.end)?st.accent:st.text)+'">'+escapeText(w.display)+' </span>').join('')}else lineEl.textContent=line.text}else{lineEl.textContent=seg?(seg.text||({intro:'Introdução',solo:'♪ Solo instrumental',interval:'♪ Intervalo',outro:'♪ Encerramento'}[seg.type])):'♪'}
 lineEl.style.fontFamily=st.lyricFont;lineEl.style.fontSize='clamp(18px,2.8vw,'+st.fontSize+'px)';lineEl.style.webkitTextStroke=(Number(st.outlineWidth)||0)+'px '+(st.outlineColor||'#080808');lineEl.style.paintOrder='stroke fill';lineEl.style.color=st.text;const newId=line?project.lines.indexOf(line):-1;if(lineEl.dataset.line!==String(newId)){lineEl.dataset.line=String(newId);lineEl.classList.remove('introanim-fade','introanim-slide','introanim-zoom');void lineEl.offsetWidth;if(st.lyricAnimation==='fade')lineEl.classList.add('introanim-fade');if(st.lyricAnimation==='rise')lineEl.classList.add('introanim-slide');if(st.lyricAnimation==='pop')lineEl.classList.add('introanim-zoom')}
-$('clock').textContent=fmt(time);$('length').textContent=fmt(duration);$('seek').max=duration;$('seek').value=time;$('play').textContent=media.paused?'▶':'Ⅱ';drawWave()}
+$('clock').textContent=fmt(time);$('length').textContent=fmt(duration);$('seek').max=duration;$('seek').value=time;$('play').textContent=media.paused?'▶':'Ⅱ';drawWave();if(tapMode)$('guidePause').textContent=media.paused?'▶ Continuar':'Ⅱ Pausar'}
 function bindMedia(){media.ontimeupdate=()=>{time=media.currentTime;preview()};media.onloadedmetadata=()=>{preview();analyzeWave()};media.onended=preview}
 bindMedia();
 $('media').onchange=e=>{const f=e.target.files[0];if(!f)return;const video=f.type.startsWith('video/')||/\.(mp4|m4v)$/i.test(f.name);if(!video&&!f.type.startsWith('audio/'))return alert('Use MP3, MP4, M4A ou outro arquivo de áudio compatível.');media.pause();if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(f);media=video?$('video'):new Audio();$('video').classList.toggle('hide',!video);if(video){$('video').muted=false}else{$('video').pause();$('video').removeAttribute('src');$('video').load()}media.src=url;hasFile=true;time=0;waveData=null;bindMedia();media.load();$('fileName').textContent=f.name+' · '+(f.size/1024/1024).toFixed(1)+' MB';$('waveStatus').textContent='Analisando áudio…';analyzeWave(f);preview()};
