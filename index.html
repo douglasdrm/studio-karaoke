@@ -68,6 +68,32 @@ input[type=color]{width:60px;height:33px;border:0;background:transparent;cursor:
 @keyframes fade{from{opacity:0}to{opacity:1}}@keyframes slide{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes zoom{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
 @media(max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}.right{position:static;grid-row:1}.left{grid-row:2}}
 @media(max-width:650px){.shell{grid-template-columns:minmax(0,1fr)}.sidebar{display:flex;align-items:center;flex-wrap:wrap;padding:12px;gap:6px}.brand{padding:0;margin-right:auto;font-size:19px}.sideitem{width:auto;padding:10px;font-size:12px}.sidehelp{display:none}main{padding:18px 11px}.card{padding:14px}.two{grid-template-columns:minmax(0,1fr)}h1{font-size:25px}.tab{font-size:12px}.preview{padding:16px}.lineitem .time{font-size:10px}}
+
+.sync-card{overflow:hidden}
+.guide-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:18px 0}
+.guide-choice{border:1px solid #405671;background:#101e32;color:#d0ddec;border-radius:12px;padding:14px;text-align:left;display:grid;gap:5px;min-width:0}
+.guide-choice strong{font-size:15px}.guide-choice span{font-size:11px;color:#98acc1}
+.guide-choice.selected{background:#273f37;border-color:#b9ff75}.guide-choice.selected strong{color:#ccff95}
+.guide-verse-picker{margin-bottom:12px}
+.guide-stage{background:linear-gradient(145deg,#1e3045,#172338);border:1px solid #465a75;border-radius:15px;padding:22px;min-height:196px;display:flex;flex-direction:column;justify-content:center;gap:13px}
+.guide-caption{font-size:10px;color:#b3c9e0;font-weight:800;letter-spacing:1px}
+.guide-count{font-size:11px;color:#ccff95;white-space:nowrap}
+.guide-text{font-weight:850;font-size:clamp(22px,2.6vw,34px);line-height:1.28;overflow-wrap:anywhere}
+.guide-next{color:#91a6bd;font-size:12px;min-height:18px;overflow-wrap:anywhere}
+.guide-meter{background:#36465d;height:6px;border-radius:10px;overflow:hidden}
+.guide-meter>div{height:100%;width:0;background:#bcff75;transition:width .15s}
+.guide-start-row{display:flex;align-items:center;gap:13px;margin:15px 0;flex-wrap:wrap}
+.guide-start{font-size:16px;padding:14px 20px}
+.guide-start-row .subtle{flex:1;min-width:180px}
+.guide-active{padding:15px;border:1px solid #5f865a;border-radius:12px;background:#20352f}
+.guide-key-row{display:flex;align-items:center;gap:12px;font-size:13px;line-height:1.5;font-weight:600}
+.guide-key{display:inline-block;background:#c1fa75;color:#1b3014;border-radius:8px;padding:11px 17px;font-weight:850;letter-spacing:1.5px;border-bottom:4px solid #83b04d}
+.guide-active .controls{margin-bottom:0}
+#guideResult{margin:13px 0}
+#advancedSync{border-top:1px solid #33445e;margin-top:18px;padding-top:17px}
+#advancedSync>summary{cursor:pointer;color:#aabbcd;font-size:12px}
+.advanced-wrap{padding-top:10px}
+@media(max-width:650px){.guide-stage{padding:15px;min-height:165px}.guide-steps{gap:6px}.guide-choice{padding:10px}.guide-choice strong{font-size:12px}.guide-text{font-size:22px}.guide-active .btn{flex:1}.guide-start{width:100%}}
 </style></head>
 <body>
 <div class="shell"><aside class="sidebar"><div class="brand">♫ studio<em>karaokê</em></div><button class="sideitem active" id="navEditor">Editor</button><button class="sideitem" id="navLibrary">Biblioteca</button><div class="sidehelp">CRIAÇÃO SEM LIMITES<br>Sem marca-d'água obrigatória.<br><br>Editor em evolução · IA em preparação</div></aside>
@@ -83,7 +109,24 @@ input[type=color]{width:60px;height:33px;border:0;background:transparent;cursor:
 <div class="controls"><button class="btn primary" id="import">✓ Importar letra (sem tempos)</button><span id="importInfo" class="tiny">Nenhum verso importado</span></div>
 <div class="notice"><b>Geração automática com IA:</b> é o próximo módulo. Ainda não está conectada; por enquanto você pode revisar e marcar tempos manualmente, sem distribuição fictícia.</div>
 </section>
-<section class="card"><h2><span class="stepnum">2</span> Revisar sincronização</h2>
+<section class="card sync-card" id="syncCard"><h2><span class="stepnum">2</span> Sincronizar a letra</h2>
+<p class="subtle">Um passo por vez. Primeiro marque quando cada <b>verso começa</b>. Depois, se quiser, refine cada palavra.</p>
+<div class="guide-steps"><button class="guide-choice selected" id="guideLines" type="button"><strong>1 · Versos</strong><span>Marcar as frases da música</span></button><button class="guide-choice" id="guideWords" type="button"><strong>2 · Palavras</strong><span>Detalhar um verso de cada vez</span></button></div>
+<div class="guide-verse-picker hide" id="guidePicker"><label class="label" for="guideVerse">QUAL VERSO QUER DETALHAR?</label><select id="guideVerse"></select></div>
+<div class="guide-stage" id="guideStage">
+<div class="row space"><span class="guide-caption" id="guideCaption">PRÓXIMO TRECHO PARA SINCRONIZAR</span><span class="guide-count" id="guideCount">0 de 0</span></div>
+<div class="guide-text" id="guideText">Primeiro importe a letra da música, na etapa 1.</div>
+<div class="guide-next" id="guideNext"></div>
+<div class="guide-meter"><div id="guideProgress"></div></div>
+</div>
+<div class="guide-start-row"><button type="button" class="btn primary guide-start" id="guideStart">▶ Começar a sincronizar</button><span id="guideHelp" class="subtle">Ao começar, a música toca e a tecla Espaço passa a marcar cada verso.</span></div>
+<div class="guide-active hide" id="guideActive" aria-live="polite">
+<div class="guide-key-row"><span class="guide-key">ESPAÇO</span><span>Pressione quando começar o trecho destacado acima.</span></div>
+<div class="controls"><button type="button" class="btn primary" id="guideTap">✓ Marcar agora</button><button type="button" class="btn" id="guidePause">Ⅱ Pausar</button><button type="button" class="btn" id="guideBack">↶ Voltar 3 s</button><button type="button" class="btn" id="guideUndo">↶ Desfazer último</button><button type="button" class="btn" id="guideFinish">■ Concluir</button></div>
+</div>
+<div id="guideResult" class="instructions">O sistema não inventa horários. Você controla quando cada marcação acontece.</div>
+<details id="advancedSync"><summary>Ajustes finos de tempos e revisão manual</summary>
+<div class="advanced-wrap">
 <div class="tabs"><button id="linesTab" class="tab active">Versos</button><button id="wordsTab" class="tab">Palavras</button></div>
 <div id="linesSection" class="section active">
 <div class="instructions">Selecione um verso. Use o áudio e os botões <b>Marcar início</b> e <b>Marcar fim</b>. Ou clique em <b>Marcar versos com Espaço</b> e pressione Espaço no começo de cada verso. Nenhuma duração é criada na importação.</div>
@@ -102,7 +145,8 @@ input[type=color]{width:60px;height:33px;border:0;background:transparent;cursor:
 <div id="wordStatus" class="status" aria-live="polite">Selecione um verso para sincronizar as palavras</div>
 <div class="group"><h3>Palavra selecionada</h3><div id="selectedWord" class="subtle">Selecione uma palavra</div><div class="two" style="margin-top:10px"><label><span class="label">INÍCIO (S)</span><input id="wordStart" type="number" step=".01" min="0" placeholder="Não marcado"></label><label><span class="label">FIM (S)</span><input id="wordEnd" type="number" step=".01" min="0" placeholder="Não marcado"></label></div></div>
 </div>
-</section>
+
+</div></details></section>
 <section class="card"><h2><span class="stepnum">3</span> Visual e trechos instrumentais</h2>
 <div class="tabs"><button class="tab active" id="appearanceTab">Aparência</button><button class="tab" id="segmentsTab">Intro / solo / intervalo</button></div>
 <div id="appearanceSection" class="section active">
